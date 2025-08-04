@@ -1,0 +1,62 @@
+name: CI/CD for Node.js App on EC2
+
+on:
+  push:
+    branches:
+      - main # Trigger on push to main
+  pull_request:
+    branches:
+      - main # Run build & test on PRs
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build (if applicable)
+        run: npm run build
+        # If you don’t have a build step, comment or remove this
+
+  deploy:
+    needs: build-and-test # Only run if build-and-test job passes
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' # Only deploy on main branch push
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup SSH key for EC2 access
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+      - name: Deploy to EC2 via SSH
+        env:
+          HOST: ec2-43-204-220-167.ap-south-1.compute.amazonaws.com
+          USER: ubuntu
+        run: |
+          ssh -o StrictHostKeyChecking=no ubuntu@ec2-43-204-220-167.ap-south-1.compute.amazonaws.com'
+            set -e
+            # Clone on first run, pull on repeat
+            if [ ! -d ~/app ]; then
+              git clone https://github.com/${{ github.repository }} ~/app
+            fi
+            cd ~/app
+            git pull
+            npm ci
+            npm run build || true     # skip if no build script
+            pm2 restart app || pm2 start index.js --name app
+          '
