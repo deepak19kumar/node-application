@@ -38,14 +38,13 @@ jobs:
           HOST: ec2-43-204-220-167.ap-south-1.compute.amazonaws.com
           USER: ubuntu
         run: |
-          ssh -o StrictHostKeyChecking=no ubuntu@ec2-43-204-220-167.ap-south-1.compute.amazonaws.com'
+          ssh -o StrictHostKeyChecking=no ubuntu@ec2-43-204-220-167.ap-south-1.compute.amazonaws.com "
             set -e
-            # Clone on first run, pull on repeat
             if [ ! -d ~/app ]; then
-              git clone https://github.com/${{ github.repository }} ~/app
+              git clone https://github.com/deepak19kumar/node-application ~/app
             fi
             cd ~/app
             git pull
             npm ci
             npm run dev
-          '
+          "
